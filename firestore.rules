@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == 'zaheersk991@gmail.com';
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Connectivity Test ---
+    match /test/connection {
+      allow get: if true;
+    }
+
+    // --- Users Collection ---
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.keys().hasAll(['uid', 'email', 'role', 'createdAt']) &&
+               data.keys().size() >= 4 &&
+               data.uid == request.auth.uid &&
+               data.email is string &&
+               data.role in ['user', 'admin'] &&
+               data.createdAt == request.time;
+      }
+
+      allow get: if isSignedIn();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'updatedAt'])
+      );
+    }
+
+    // --- NewsChecks Collection ---
+    match /newsChecks/{checkId} {
+      function isValidNewsCheck(data) {
+        return data.keys().hasAll(['userId', 'content', 'prediction', 'confidence', 'explanation', 'createdAt']) &&
+               data.userId == request.auth.uid &&
+               data.content is string && data.content.size() <= 50000 &&
+               data.prediction in ['Real', 'Fake', 'Uncertain'] &&
+               data.confidence is number && data.confidence >= 0 && data.confidence <= 100 &&
+               data.createdAt == request.time;
+      }
+
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow get: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && isValidNewsCheck(request.resource.data);
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    // --- Feedback Collection ---
+    match /feedback/{feedbackId} {
+      function isValidFeedback(data) {
+        return data.keys().hasAll(['checkId', 'userId', 'isCorrect', 'createdAt']) &&
+               data.userId == request.auth.uid &&
+               data.checkId is string &&
+               data.isCorrect is bool &&
+               data.createdAt == request.time;
+      }
+
+      allow create: if isSignedIn() && isValidFeedback(request.resource.data);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+  }
+}

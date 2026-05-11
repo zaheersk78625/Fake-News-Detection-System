@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "NewsCheck": {
+      "title": "News Check",
+      "description": "A news article verification record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "content": { "type": "string" },
+        "prediction": { "type": "string", "enum": ["Real", "Fake", "Uncertain"] },
+        "confidence": { "type": "number" },
+        "explanation": { "type": "string" },
+        "language": { "type": "string" },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "source": { "type": "string" },
+            "type": { "type": "string" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "content", "prediction", "confidence", "explanation", "createdAt"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "User feedback on a prediction",
+      "type": "object",
+      "properties": {
+        "checkId": { "type": "string" },
+        "userId": { "type": "string" },
+        "isCorrect": { "type": "boolean" },
+        "correctedLabel": { "type": "string" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["checkId", "userId", "isCorrect", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users": {
+      "schema": "User",
+      "description": "Collection of user profiles"
+    },
+    "newsChecks": {
+      "schema": "NewsCheck",
+      "description": "Collection of news verification history"
+    },
+    "feedback": {
+      "schema": "Feedback",
+      "description": "Collection of user feedback on predictions"
+    }
+  }
+}
